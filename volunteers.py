@@ -13,6 +13,7 @@ world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 def get_country(name):
     return world[world.name == name.title()]
 
+
 def process_gis(fn):
     with open(fn) as f:
         points = json.loads(f.read())
@@ -25,15 +26,19 @@ def process_gis(fn):
     df.brightness = df.brightness.apply(lambda x: x - 273.15)
     gdf = gpd.GeoDataFrame(df[df['confidence']>90],
                            geometry=gpd.points_from_xy(df.longitude, df.latitude))
+    return gdf
+
 
 def filter_country(c_df, g_df):
     return sjoin(g_df, c_df, how='left')
+
 
 def get_brightness_scale(df):
     IQR = df.brightness.quantile(.75) - df.brightness.quantile(.25)
     top = min(df.brightness.quantile(.75) + 1.5*IQR, df.brightness.max())
     bot = max(df.brightness.quantile(.25) - 1.5*IQR, df.brightness.min())
     return [bot, top]
+
 
 def plot_years(first_year, last_year, plot_gdf, country='Australia', output_path = 'charts/maps'):
 
