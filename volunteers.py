@@ -18,13 +18,14 @@ def process_gis(fn):
     with open(fn) as f:
         points = json.loads(f.read())
     # Process date information
+    df = pd.DataFrame(points)
     df['date'] = pd.to_datetime(df['acq_date'] + ':' + df['acq_time'], format='%Y-%m-%d:%H%M', utc=True)
     df = df.set_index('date')
     df['month'] = df.index.month
     df['year'] = df.index.year
     df.confidence = df.confidence.apply(int)
     df.brightness = df.brightness.apply(lambda x: x - 273.15)
-    gdf = gpd.GeoDataFrame(df[df['confidence']>90],
+    gdf = gpd.GeoDataFrame(df[df['confidence'] > 90],
                            geometry=gpd.points_from_xy(df.longitude, df.latitude))
     return gdf
 
@@ -48,10 +49,11 @@ def plot_years(first_year, last_year, plot_gdf, country='Australia', output_path
               6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct',
               11: 'Nov', 12: 'Dec'}
     vmin, vmax = get_brightness_scale(plot_gdf)
-    extent = get_country(country).total_bounds
+    c_gpd = get_country(country)
+    extent = c_gpd.total_bounds
     data = []
 
-    # start the for loop to create one map per year
+    # loop through month by month
     for year in list_of_years:
         for month in list_of_months:
             annual = plot_gdf.query(f'year=={year}')
@@ -61,9 +63,9 @@ def plot_years(first_year, last_year, plot_gdf, country='Australia', output_path
             else:
                 data = pd.concat([data, datum])
             if len(datum) != 0:
-                # create map, UDPATE: added plt.Normalize to keep the legend range the same for all maps
-                ax = aus.plot(color='darkgreen', edgecolor='black')
-                gplt.kdeplot(data, ax=ax, clip=aus, cmap='inferno_r', opacity=.2, shade=True, shade_lowest=False)
+                # create approximate distribution from past to current fires and plot new fires
+                ax = c_gpd.plot(color='darkgreen', edgecolor='black')
+                gplt.kdeplot(data, ax=ax, clip=c_gpd, cmap='inferno_r', opacity=.2, shade=True, shade_lowest=False)
                 fig = gplt.pointplot(datum, ax=ax, cmap='Reds', hue='brightness', figsize=(10, 10),
                                      linewidth=0.8, edgecolor='black', legend=True, vmin=vmin, vmax=vmax,
                                      norm=plt.Normalize(vmin=vmin, vmax=vmax), extent=extent)
@@ -72,16 +74,16 @@ def plot_years(first_year, last_year, plot_gdf, country='Australia', output_path
                 fig.axis('off')
 
                 # add a title
-                fig.set_title(f'Fires in {country}', \
+                fig.set_title(f'Fires in {country}',
                               fontdict={'fontsize': '25',
                                         'fontweight': '5'})
-
+                # add year/month annotation
                 fig.annotate(str(year) + ': ' + months[month],
                              xy=(0.1, .225), xycoords='figure fraction',
                              horizontalalignment='left', verticalalignment='top',
                              fontsize=18, fontweight=3)
 
-                # this will save the figure as a high-res png in the output path. you can also save as svg if you prefer.
+                # save image
                 filepath = os.path.join(output_path, str(year) + str(month) + '_fire.png')
                 chart = fig.get_figure()
                 plt.show()
