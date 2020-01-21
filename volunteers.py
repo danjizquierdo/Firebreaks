@@ -19,14 +19,14 @@ def process_gis(fn):
         points = json.loads(f.read())
     # Process date information
     df = pd.DataFrame(points)
+    df.confidence = df.confidence.apply(int)
+    df = df[df['confidence'] > 90]
     df['date'] = pd.to_datetime(df['acq_date'] + ':' + df['acq_time'], format='%Y-%m-%d:%H%M', utc=True)
     df = df.set_index('date')
     df['month'] = df.index.month
     df['year'] = df.index.year
-    df.confidence = df.confidence.apply(int)
     df.brightness = df.brightness.apply(lambda x: x - 273.15)
-    gdf = gpd.GeoDataFrame(df[df['confidence'] > 90],
-                           geometry=gpd.points_from_xy(df.longitude, df.latitude))
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.longitude, df.latitude))
     return gdf
 
 
