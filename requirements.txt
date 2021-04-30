@@ -79,7 +79,7 @@ pytz==2019.3
 pyzmq==18.1.1
 rasterio==1.1.2
 requests==2.22.0
-rsa==3.4.2
+rsa==4.7
 Rtree==0.9.3
 s3transfer==0.2.1
 scikit-learn==0.22.1
